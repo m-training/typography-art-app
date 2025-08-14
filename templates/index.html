@@ -197,10 +197,45 @@ Typo Art</textarea>
                 ctx.fillStyle = settings.backgroundColor;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                const lines = settings.textContent.split('\n');
+                const padding = 40; // キャンバス内の視覚的な余白
+
+                // --- フォントサイズの自動調整 ---
+                let effectiveFontSize = settings.fontSize;
+
+                // テキストの幅を測定するために一時的にフォントを設定
+                ctx.font = `${effectiveFontSize}px "${settings.fontFamily}"`;
+                
+                // 水平方向のオーバーフローをチェック
+                let longestLineWidth = 0;
+                lines.forEach(line => {
+                    const metrics = ctx.measureText(line);
+                    if (metrics.width > longestLineWidth) {
+                        longestLineWidth = metrics.width;
+                    }
+                });
+
+                if (longestLineWidth > canvas.width - padding * 2) {
+                    effectiveFontSize = effectiveFontSize * ((canvas.width - padding * 2) / longestLineWidth);
+                }
+                
+                // 新しいフォントサイズで垂直方向のオーバーフローをチェック
+                let effectiveLineHeight = effectiveFontSize * 1.2;
+                let totalTextHeight = lines.length * effectiveLineHeight;
+
+                if (totalTextHeight > canvas.height - padding * 2) {
+                    effectiveFontSize = (canvas.height - padding * 2) / lines.length / 1.2;
+                }
+                // --- 調整ロジック終了 ---
+
+                // 最終的な行の高さを計算
+                effectiveLineHeight = effectiveFontSize * 1.2;
+
                 // テキストスタイルの設定
                 ctx.fillStyle = settings.fontColor;
-                ctx.font = `${settings.fontSize}px "${settings.fontFamily}"`;
+                ctx.font = `${effectiveFontSize}px "${settings.fontFamily}"`;
                 ctx.textAlign = settings.textAlign;
+                ctx.textBaseline = 'middle'; // 垂直方向の配置を簡単にするために 'middle' を使用
 
                 // 影の設定
                 if (settings.shadowEnabled) {
@@ -221,29 +256,28 @@ Typo Art</textarea>
                 // テキストの描画位置を計算
                 let x;
                 if (settings.textAlign === 'left') {
-                    x = 20;
+                    x = padding;
                 } else if (settings.textAlign === 'right') {
-                    x = canvas.width - 20;
+                    x = canvas.width - padding;
                 } else { // center
                     x = canvas.width / 2;
                 }
                 
-                // 複数行テキストに対応
-                const lines = settings.textContent.split('\n');
-                const lineHeight = settings.fontSize * 1.2;
-                const totalTextHeight = lines.length * lineHeight;
-                let startY = (canvas.height - totalTextHeight) / 2 + settings.fontSize;
+                const blockHeight = lines.length * effectiveLineHeight;
+                const startY = (canvas.height / 2) - (blockHeight / 2) + (effectiveLineHeight / 2);
 
+                // 各行を描画
                 lines.forEach((line, index) => {
-                    const y = startY + (index * lineHeight);
+                    const y = startY + (index * effectiveLineHeight);
                     if (settings.strokeEnabled) {
                         ctx.strokeText(line, x, y);
                     }
                     ctx.fillText(line, x, y);
                 });
 
-                // 描画後に影をリセット
+                // 描画後にコンテキストをリセット
                 ctx.shadowColor = 'transparent';
+                ctx.textBaseline = 'alphabetic'; // デフォルトに戻す
             }
 
             // --- ランダム設定を生成する関数 ---
@@ -272,27 +306,22 @@ Typo Art</textarea>
                 };
             }
 
-            // --- API通信とUI更新 ---
-            async function fetchAndDisplaySettings() {
-                try {
-                    const response = await fetch('/api/settings');
-                    const settings = await response.json();
-                    
-                    savedSettingsList.innerHTML = ''; // リストをクリア
-                    if (settings.length === 0) {
-                        savedSettingsList.innerHTML = '<li>保存された設定はありません。</li>';
-                    } else {
-                        settings.forEach(setting => {
-                            const li = document.createElement('li');
-                            li.textContent = setting.name;
-                            li.dataset.id = setting.id; // IDをdata属性として保持
-                            li.dataset.settings = JSON.stringify(setting); // 全設定を保持
-                            savedSettingsList.appendChild(li);
-                        });
-                    }
-                } catch (error) {
-                    console.error('設定の読み込みに失敗しました:', error);
-                    savedSettingsList.innerHTML = '<li>読み込みに失敗しました。</li>';
+            // --- ローカルストレージからの設定読み込み ---
+            function loadAndDisplaySettings() {
+                const settingsJSON = localStorage.getItem('typography_settings');
+                const settings = settingsJSON ? JSON.parse(settingsJSON) : [];
+                
+                savedSettingsList.innerHTML = ''; // リストをクリア
+                if (settings.length === 0) {
+                    savedSettingsList.innerHTML = '<li>保存された設定はありません。</li>';
+                } else {
+                    settings.slice().reverse().forEach(setting => {
+                        const li = document.createElement('li');
+                        li.textContent = setting.name;
+                        li.dataset.id = setting.id;
+                        li.dataset.settings = JSON.stringify(setting);
+                        savedSettingsList.appendChild(li);
+                    });
                 }
             }
 
@@ -304,7 +333,7 @@ Typo Art</textarea>
                 }
             });
 
-            saveSettingsBtn.addEventListener('click', async () => {
+            saveSettingsBtn.addEventListener('click', () => {
                 const name = settingNameInput.value.trim();
                 if (!name) {
                     alert('設定の名前を入力してください。');
@@ -315,27 +344,21 @@ Typo Art</textarea>
                     return;
                 }
 
-                const dataToSave = { ...currentSettings, name: name };
+                const settingsJSON = localStorage.getItem('typography_settings');
+                const settings = settingsJSON ? JSON.parse(settingsJSON) : [];
+
+                const newSetting = { 
+                    ...currentSettings, 
+                    name: name,
+                    id: Date.now() // ユニークIDとしてタイムスタンプを使用
+                };
                 
-                try {
-                    const response = await fetch('/api/settings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(dataToSave)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`サーバーエラー: ${response.statusText}`);
-                    }
-                    
-                    settingNameInput.value = ''; // 入力欄をクリア
-                    await fetchAndDisplaySettings(); // リストを更新
-                    alert(`設定「${name}」を保存しました。`);
-
-                } catch (error) {
-                    console.error('設定の保存に失敗しました:', error);
-                    alert('設定の保存に失敗しました。');
-                }
+                settings.push(newSetting);
+                localStorage.setItem('typography_settings', JSON.stringify(settings));
+                
+                settingNameInput.value = ''; // 入力欄をクリア
+                loadAndDisplaySettings(); // リストを更新
+                alert(`設定「${name}」を保存しました。`);
             });
             
             savedSettingsList.addEventListener('click', (e) => {
@@ -346,24 +369,17 @@ Typo Art</textarea>
                 }
             });
 
-            randomLoadBtn.addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/api/settings/random');
-                    if (!response.ok) {
-                        if(response.status === 404) {
-                            alert('保存されている設定がありません。');
-                        } else {
-                            throw new Error('ランダム設定の取得に失敗しました。');
-                        }
-                        return;
-                    }
-                    const settings = await response.json();
-                    textInput.value = settings.textContent;
-                    drawCanvas(settings);
-                } catch (error) {
-                    console.error(error);
-                    alert(error.message);
+            randomLoadBtn.addEventListener('click', () => {
+                const settingsJSON = localStorage.getItem('typography_settings');
+                const settings = settingsJSON ? JSON.parse(settingsJSON) : [];
+
+                if (settings.length === 0) {
+                    alert('保存されている設定がありません。');
+                    return;
                 }
+                const randomSetting = getRandomItem(settings);
+                textInput.value = randomSetting.textContent;
+                drawCanvas(randomSetting);
             });
 
             saveImageBtn.addEventListener('click', () => {
@@ -374,7 +390,7 @@ Typo Art</textarea>
             });
 
             // --- 初期化処理 ---
-            fetchAndDisplaySettings(); // ページ読み込み時に保存済み設定を読み込む
+            loadAndDisplaySettings(); // ページ読み込み時に保存済み設定を読み込む
             randomGenerateBtn.click(); // ページ読み込み時に初期アートを生成
         });
     </script>
