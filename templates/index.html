@@ -5,381 +5,358 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>タイポグラフィ・アート・ジェネレーター</title>
     
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google FontsからWebフォントを読み込む -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Orbitron:wght@400;700&family=Press+Start+2P&family=RocknRoll+One&family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        :root {
-            --bg-color: #1a1a1a;
-            --text-color: #e0e0e0;
-            --primary-color: #007bff;
-            --primary-hover-color: #0056b3;
-            --panel-bg-color: #2c2c2c;
-            --border-color: #444;
-            --input-bg-color: #333;
-        }
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            line-height: 1.6;
-        }
-        h1, h2 {
-            font-weight: 300;
-            text-align: center;
-            color: #fff;
-        }
-        .main-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            width: 100%;
-            max-width: 1400px;
-            justify-content: center;
+            font-family: 'Noto Sans JP', sans-serif;
         }
         .panel {
-            background-color: var(--panel-bg-color);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background-color: white;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
         }
-        .controls-panel {
-            flex: 1;
-            min-width: 280px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        .design-unit-label {
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
         }
-        .canvas-container {
-            flex: 2;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-width: 400px;
-        }
-        #typography-canvas {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            max-width: 100%;
-            height: auto;
-        }
-        .settings-panel {
-            flex: 1;
-            min-width: 280px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        textarea, input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            background-color: var(--input-bg-color);
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            border-radius: 4px;
-            box-sizing: border-box;
-            resize: vertical;
-        }
-        button {
-            padding: 10px 15px;
-            border: none;
-            background-color: var(--primary-color);
+        .design-unit-label.selected {
+            background-color: #4f46e5;
             color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            width: 100%;
         }
-        button:hover {
-            background-color: var(--primary-hover-color);
-        }
-        .save-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            border-top: 1px solid var(--border-color);
-            padding-top: 15px;
-        }
-        #saved-settings-list {
-            list-style-type: none;
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
             padding: 0;
-            margin: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
         }
-        #saved-settings-list li {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        #saved-settings-list li:hover {
-            background-color: #3a3a3a;
-        }
-        #saved-settings-list li:last-child {
-            border-bottom: none;
+        #canvas-container {
+            height: 75vh;
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800">
 
-    <h1>タイポグラフィ・アート・ジェネレーター</h1>
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight">タイポグラフィ・アート</h1>
+            <p class="mt-2 text-lg text-gray-600">文字や単語に、命を吹き込もう。</p>
+        </header>
 
-    <div class="main-container">
-        <!-- 操作パネル -->
-        <div class="panel controls-panel">
-            <h2>コントロール</h2>
-            <textarea id="text-input" rows="5" placeholder="ここにテキストを入力...">Hello World!
-Typo Art</textarea>
-            
-            <button id="random-generate-btn">ランダム生成</button>
-            <button id="random-load-btn">保存済みからランダム表示</button>
-            <button id="save-image-btn">画像として保存</button>
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- 操作パネル -->
+            <div class="panel lg:w-1/4 p-6 space-y-6 self-start">
+                <div>
+                    <h2 class="text-xl font-bold mb-3">テキスト</h2>
+                    <textarea id="text-input" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 transition" placeholder="ここにテキストを入力...">Typo
+Art</textarea>
+                </div>
+                
+                <div>
+                    <h2 class="text-xl font-bold mb-3">デザイン単位</h2>
+                    <div id="design-unit-selector" class="flex justify-around bg-gray-200 p-1 rounded-lg">
+                        <label class="design-unit-label selected w-full text-center py-1.5 px-2 rounded-md cursor-pointer"><input type="radio" name="design-unit" value="whole" class="sr-only" checked> 全体</label>
+                        <label class="design-unit-label w-full text-center py-1.5 px-2 rounded-md cursor-pointer"><input type="radio" name="design-unit" value="word" class="sr-only"> 単語ごと</label>
+                        <label class="design-unit-label w-full text-center py-1.5 px-2 rounded-md cursor-pointer"><input type="radio" name="design-unit" value="character" class="sr-only"> 文字ごと</label>
+                    </div>
+                </div>
 
-            <div class="save-group">
-                <input type="text" id="setting-name-input" placeholder="この設定に名前を付ける">
-                <button id="save-settings-btn">現在のアート設定を保存</button>
+                <div id="action-buttons" class="space-y-3 pt-4 border-t">
+                     <button id="random-generate-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-transform active:scale-95">ランダム生成</button>
+                     <button id="save-image-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-transform active:scale-95">画像として保存</button>
+                </div>
             </div>
-        </div>
 
-        <!-- キャンバス表示エリア -->
-        <div class="panel canvas-container">
-            <canvas id="typography-canvas" width="800" height="600"></canvas>
-        </div>
-
-        <!-- 保存済み設定リスト -->
-        <div class="panel settings-panel">
-            <h2>保存済み設定</h2>
-            <ul id="saved-settings-list">
-                <!-- ここに保存された設定が動的に追加されます -->
-            </ul>
+            <!-- キャンバス表示エリア -->
+            <div id="canvas-container" class="panel lg:w-3/4 p-4 flex justify-center items-center">
+                <canvas id="typography-canvas"></canvas>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM要素の取得 ---
             const canvas = document.getElementById('typography-canvas');
+            const canvasContainer = document.getElementById('canvas-container');
             const ctx = canvas.getContext('2d');
             const textInput = document.getElementById('text-input');
             const randomGenerateBtn = document.getElementById('random-generate-btn');
-            const saveSettingsBtn = document.getElementById('save-settings-btn');
-            const settingNameInput = document.getElementById('setting-name-input');
-            const savedSettingsList = document.getElementById('saved-settings-list');
-            const randomLoadBtn = document.getElementById('random-load-btn');
             const saveImageBtn = document.getElementById('save-image-btn');
+            const designUnitSelector = document.getElementById('design-unit-selector');
 
-            // --- グローバル変数 ---
-            let currentSettings = {}; // 現在キャンバスに表示されている設定を保持
+            let currentSettings = {};
 
-            // 利用可能なWebフォントのリスト (READMEの指示に従って編集)
             const webFonts = [
                 'serif', 'sans-serif', 'monospace', 'cursive', 'fantasy',
-                'Orbitron', 'Press Start 2P'
+                'Orbitron', 'Press Start 2P', 'Noto Sans JP', 'Shippori Mincho', 'RocknRoll One'
             ];
 
-            // --- ヘルパー関数 ---
             const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
             const getRandomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
             const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-            // --- メインの描画関数 ---
-            function drawCanvas(settings) {
-                // 現在の設定をグローバル変数に保存
-                currentSettings = settings;
+            function resizeCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const style = getComputedStyle(canvasContainer);
+                const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+                const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
 
-                // キャンバスをクリア
-                ctx.fillStyle = settings.backgroundColor;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                const newWidth = canvasContainer.clientWidth - paddingX;
+                const newHeight = canvasContainer.clientHeight - paddingY;
 
-                const lines = settings.textContent.split('\n');
-                const padding = 40; // キャンバス内の視覚的な余白
+                canvas.style.width = `${newWidth}px`;
+                canvas.style.height = `${newHeight}px`;
 
-                // --- フォントサイズの自動調整 ---
-                let effectiveFontSize = settings.fontSize;
+                canvas.width = newWidth * dpr;
+                canvas.height = newHeight * dpr;
 
-                // テキストの幅を測定するために一時的にフォントを設定
-                ctx.font = `${effectiveFontSize}px "${settings.fontFamily}"`;
-                
-                // 水平方向のオーバーフローをチェック
-                let longestLineWidth = 0;
-                lines.forEach(line => {
-                    const metrics = ctx.measureText(line);
-                    if (metrics.width > longestLineWidth) {
-                        longestLineWidth = metrics.width;
-                    }
-                });
+                ctx.scale(dpr, dpr);
 
-                if (longestLineWidth > canvas.width - padding * 2) {
-                    effectiveFontSize = effectiveFontSize * ((canvas.width - padding * 2) / longestLineWidth);
+                if (Object.keys(currentSettings).length > 0) {
+                    drawCanvas(currentSettings);
                 }
-                
-                // 新しいフォントサイズで垂直方向のオーバーフローをチェック
-                let effectiveLineHeight = effectiveFontSize * 1.2;
-                let totalTextHeight = lines.length * effectiveLineHeight;
-
-                if (totalTextHeight > canvas.height - padding * 2) {
-                    effectiveFontSize = (canvas.height - padding * 2) / lines.length / 1.2;
-                }
-                // --- 調整ロジック終了 ---
-
-                // 最終的な行の高さを計算
-                effectiveLineHeight = effectiveFontSize * 1.2;
-
-                // テキストスタイルの設定
-                ctx.fillStyle = settings.fontColor;
-                ctx.font = `${effectiveFontSize}px "${settings.fontFamily}"`;
-                ctx.textAlign = settings.textAlign;
-                ctx.textBaseline = 'middle'; // 垂直方向の配置を簡単にするために 'middle' を使用
-
-                // 影の設定
-                if (settings.shadowEnabled) {
-                    ctx.shadowColor = settings.shadowColor;
-                    ctx.shadowBlur = settings.shadowBlur;
-                    ctx.shadowOffsetX = settings.shadowOffsetX;
-                    ctx.shadowOffsetY = settings.shadowOffsetY;
-                } else {
-                    ctx.shadowColor = 'transparent';
-                }
-
-                // アウトラインの設定
-                if (settings.strokeEnabled) {
-                    ctx.strokeStyle = settings.strokeColor;
-                    ctx.lineWidth = settings.strokeWidth;
-                }
-
-                // テキストの描画位置を計算
-                let x;
-                if (settings.textAlign === 'left') {
-                    x = padding;
-                } else if (settings.textAlign === 'right') {
-                    x = canvas.width - padding;
-                } else { // center
-                    x = canvas.width / 2;
-                }
-                
-                const blockHeight = lines.length * effectiveLineHeight;
-                const startY = (canvas.height / 2) - (blockHeight / 2) + (effectiveLineHeight / 2);
-
-                // 各行を描画
-                lines.forEach((line, index) => {
-                    const y = startY + (index * effectiveLineHeight);
-                    if (settings.strokeEnabled) {
-                        ctx.strokeText(line, x, y);
-                    }
-                    ctx.fillText(line, x, y);
-                });
-
-                // 描画後にコンテキストをリセット
-                ctx.shadowColor = 'transparent';
-                ctx.textBaseline = 'alphabetic'; // デフォルトに戻す
             }
 
-            // --- ランダム設定を生成する関数 ---
-            function generateRandomSettings() {
-                const text = textInput.value.trim();
-                if (!text) {
+            function generateRandomStyle() {
+                return {
+                    fontFamily: getRandomItem(webFonts),
+                    fontSize: getRandomInt(20, 150),
+                    fontColor: getRandomColor(),
+                    shadowEnabled: Math.random() > 0.5,
+                    shadowColor: getRandomColor(),
+                    shadowBlur: getRandomInt(2, 15),
+                    shadowOffsetX: getRandomInt(-10, 10),
+                    shadowOffsetY: getRandomInt(-10, 10),
+                    strokeEnabled: Math.random() > 0.7,
+                    strokeColor: getRandomColor(),
+                    strokeWidth: getRandomInt(1, 4)
+                };
+            }
+
+            function generateSettings() {
+                const text = textInput.value;
+                if (!text.trim()) {
                     alert('テキストを入力してください。');
                     return null;
                 }
 
-                return {
-                    textContent: text,
-                    fontFamily: getRandomItem(webFonts),
-                    fontSize: getRandomInt(40, 150),
-                    fontColor: getRandomColor(),
+                const designUnit = document.querySelector('input[name="design-unit"]:checked').value;
+                const settings = {
+                    designUnit: designUnit,
                     backgroundColor: getRandomColor(),
-                    textAlign: getRandomItem(['left', 'center', 'right']),
-                    shadowEnabled: Math.random() > 0.4, // 60%の確率で有効
-                    shadowColor: getRandomColor(),
-                    shadowBlur: getRandomInt(5, 20),
-                    shadowOffsetX: getRandomInt(-15, 15),
-                    shadowOffsetY: getRandomInt(-15, 15),
-                    strokeEnabled: Math.random() > 0.6, // 40%の確率で有効
-                    strokeColor: getRandomColor(),
-                    strokeWidth: getRandomInt(1, 5)
+                    textContent: text,
+                    units: []
                 };
-            }
 
-            // --- ローカルストレージからの設定読み込み ---
-            function loadAndDisplaySettings() {
-                const settingsJSON = localStorage.getItem('typography_settings');
-                const settings = settingsJSON ? JSON.parse(settingsJSON) : [];
-                
-                savedSettingsList.innerHTML = ''; // リストをクリア
-                if (settings.length === 0) {
-                    savedSettingsList.innerHTML = '<li>保存された設定はありません。</li>';
+                if (designUnit === 'whole') {
+                    settings.units.push({ text: text, style: generateRandomStyle() });
                 } else {
-                    settings.slice().reverse().forEach(setting => {
-                        const li = document.createElement('li');
-                        li.textContent = setting.name;
-                        li.dataset.id = setting.id;
-                        li.dataset.settings = JSON.stringify(setting);
-                        savedSettingsList.appendChild(li);
+                    // 「単語ごと」と「文字ごと」のロジックを統一し、文字単位でスタイルを適用
+                    // これにより日本語のような言語でもデザインが混在するようになる
+                    [...text].forEach(char => {
+                        if (/\s/.test(char)) { // スペース、改行、タブなどの空白文字をチェック
+                            settings.units.push({ text: char, style: null });
+                        } else {
+                            settings.units.push({ text: char, style: generateRandomStyle() });
+                        }
                     });
                 }
+                return settings;
             }
 
-            // --- イベントリスナー ---
+            function drawCanvas(settings) {
+                if (!settings || !settings.units) return;
+                currentSettings = settings;
+
+                const logicalWidth = canvas.width / (window.devicePixelRatio || 1);
+                const logicalHeight = canvas.height / (window.devicePixelRatio || 1);
+
+                ctx.fillStyle = settings.backgroundColor;
+                ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+                if (settings.units.length === 0) return;
+
+                if (settings.designUnit === 'whole') {
+                    drawWholeText(settings, logicalWidth, logicalHeight);
+                } else {
+                    drawTextByUnits(settings, logicalWidth, logicalHeight);
+                }
+            }
+            
+            function drawWholeText(settings, canvasWidth, canvasHeight) {
+                const { text, style } = settings.units[0];
+                const lines = text.split('\n');
+                const padding = 50;
+
+                let effectiveFontSize = style.fontSize;
+                ctx.font = `${effectiveFontSize}px "${style.fontFamily}"`;
+                
+                let longestLineWidth = 0;
+                lines.forEach(line => {
+                    const metrics = ctx.measureText(line);
+                    if (metrics.width > longestLineWidth) longestLineWidth = metrics.width;
+                });
+
+                if (longestLineWidth > canvasWidth - padding * 2) {
+                    effectiveFontSize *= (canvasWidth - padding * 2) / longestLineWidth;
+                }
+                
+                let effectiveLineHeight = effectiveFontSize * 1.2;
+                if (lines.length * effectiveLineHeight > canvasHeight - padding * 2) {
+                    effectiveFontSize = (canvasHeight - padding * 2) / lines.length / 1.2;
+                }
+                effectiveLineHeight = effectiveFontSize * 1.2;
+
+                ctx.font = `${effectiveFontSize}px "${style.fontFamily}"`;
+                Object.assign(ctx, {
+                    fillStyle: style.fontColor,
+                    textAlign: 'center',
+                    textBaseline: 'middle'
+                });
+
+                if (style.shadowEnabled) {
+                    Object.assign(ctx, {
+                        shadowColor: style.shadowColor,
+                        shadowBlur: style.shadowBlur,
+                        shadowOffsetX: style.shadowOffsetX,
+                        shadowOffsetY: style.shadowOffsetY
+                    });
+                } else {
+                    ctx.shadowColor = 'transparent';
+                }
+
+                const startY = canvasHeight / 2 - (lines.length - 1) * effectiveLineHeight / 2;
+                lines.forEach((line, index) => {
+                    const y = startY + index * effectiveLineHeight;
+                    if (style.strokeEnabled) {
+                        ctx.strokeStyle = style.strokeColor;
+                        ctx.lineWidth = style.strokeWidth;
+                        ctx.strokeText(line, canvasWidth / 2, y);
+                    }
+                    ctx.fillText(line, canvasWidth / 2, y);
+                });
+                ctx.shadowColor = 'transparent';
+            }
+
+            function drawTextByUnits(settings, canvasWidth, canvasHeight) {
+                const padding = 20;
+                const layoutWidth = canvasWidth - padding * 2;
+                const layoutHeight = canvasHeight - padding * 2;
+
+                // 1. Layout Phase
+                let lines = [];
+                let currentLine = { units: [], width: 0, height: 0 };
+
+                settings.units.forEach(unit => {
+                    if (unit.text === '\n') {
+                        if (currentLine.units.length > 0) lines.push(currentLine);
+                        lines.push({ units: [], width: 0, height: currentLine.height > 0 ? currentLine.height : 20, isNewline: true });
+                        currentLine = { units: [], width: 0, height: 0 };
+                        return;
+                    }
+
+                    let unitWidth, unitHeight;
+                    if (unit.style) {
+                        ctx.font = `${unit.style.fontSize}px "${unit.style.fontFamily}"`;
+                        unitWidth = ctx.measureText(unit.text).width;
+                        unitHeight = unit.style.fontSize * 1.2;
+                    } else { // Whitespace
+                        ctx.font = '20px serif';
+                        unitWidth = ctx.measureText(unit.text).width;
+                        unitHeight = 20;
+                    }
+                    
+                    if (currentLine.width + unitWidth > layoutWidth && currentLine.units.length > 0) {
+                        lines.push(currentLine);
+                        currentLine = { units: [], width: 0, height: 0 };
+                    }
+                    
+                    currentLine.units.push({ ...unit, width: unitWidth });
+                    currentLine.width += unitWidth;
+                    if (unitHeight > currentLine.height) currentLine.height = unitHeight;
+                });
+
+                if (currentLine.units.length > 0) lines.push(currentLine);
+
+                // 2. Scaling Phase
+                const blockWidth = Math.max(0, ...lines.map(l => l.width));
+                const blockHeight = lines.reduce((sum, l) => sum + l.height, 0);
+
+                let scale = 1.0;
+                if (blockWidth > layoutWidth) scale = Math.min(scale, layoutWidth / blockWidth);
+                if (blockHeight > layoutHeight) scale = Math.min(scale, layoutHeight / blockHeight);
+
+                // 3. Drawing Phase
+                const finalBlockHeight = blockHeight * scale;
+                let y = padding + (layoutHeight - finalBlockHeight) / 2;
+                
+                ctx.textBaseline = 'top';
+
+                lines.forEach(line => {
+                    const finalLineWidth = line.width * scale;
+                    const finalLineHeight = line.height * scale;
+                    let x = padding + (layoutWidth - finalLineWidth) / 2;
+
+                    line.units.forEach(unit => {
+                        if (!unit.style) {
+                             x += unit.width * scale;
+                             return;
+                        }
+                        
+                        const style = unit.style;
+                        const scaledFontSize = style.fontSize * scale;
+                        ctx.font = `${scaledFontSize}px "${style.fontFamily}"`;
+                        ctx.fillStyle = style.fontColor;
+
+                        if (style.shadowEnabled) {
+                            Object.assign(ctx, {
+                                shadowColor: style.shadowColor,
+                                shadowBlur: style.shadowBlur * scale,
+                                shadowOffsetX: style.shadowOffsetX * scale,
+                                shadowOffsetY: style.shadowOffsetY * scale
+                            });
+                        } else {
+                            ctx.shadowColor = 'transparent';
+                        }
+                        
+                        const unitY = y + (finalLineHeight - (scaledFontSize * 1.2)) / 2;
+
+                        if (style.strokeEnabled) {
+                            ctx.strokeStyle = style.strokeColor;
+                            ctx.lineWidth = style.strokeWidth * scale;
+                            ctx.strokeText(unit.text, x, unitY);
+                        }
+                        ctx.fillText(unit.text, x, unitY);
+                        
+                        x += unit.width * scale;
+                    });
+                    y += finalLineHeight;
+                });
+                ctx.shadowColor = 'transparent';
+            }
+            
+            designUnitSelector.addEventListener('change', (e) => {
+                document.querySelectorAll('.design-unit-label').forEach(label => {
+                    label.classList.remove('selected');
+                });
+                e.target.parentElement.classList.add('selected');
+                randomGenerateBtn.click();
+            });
+
             randomGenerateBtn.addEventListener('click', () => {
-                const newSettings = generateRandomSettings();
+                const newSettings = generateSettings();
                 if (newSettings) {
                     drawCanvas(newSettings);
                 }
-            });
-
-            saveSettingsBtn.addEventListener('click', () => {
-                const name = settingNameInput.value.trim();
-                if (!name) {
-                    alert('設定の名前を入力してください。');
-                    return;
-                }
-                if (Object.keys(currentSettings).length === 0) {
-                    alert('まず「ランダム生成」ボタンでアートを作成してください。');
-                    return;
-                }
-
-                const settingsJSON = localStorage.getItem('typography_settings');
-                const settings = settingsJSON ? JSON.parse(settingsJSON) : [];
-
-                const newSetting = { 
-                    ...currentSettings, 
-                    name: name,
-                    id: Date.now() // ユニークIDとしてタイムスタンプを使用
-                };
-                
-                settings.push(newSetting);
-                localStorage.setItem('typography_settings', JSON.stringify(settings));
-                
-                settingNameInput.value = ''; // 入力欄をクリア
-                loadAndDisplaySettings(); // リストを更新
-                alert(`設定「${name}」を保存しました。`);
-            });
-            
-            savedSettingsList.addEventListener('click', (e) => {
-                if (e.target.tagName === 'LI' && e.target.dataset.settings) {
-                    const settings = JSON.parse(e.target.dataset.settings);
-                    textInput.value = settings.textContent; // テキストエリアも更新
-                    drawCanvas(settings);
-                }
-            });
-
-            randomLoadBtn.addEventListener('click', () => {
-                const settingsJSON = localStorage.getItem('typography_settings');
-                const settings = settingsJSON ? JSON.parse(settingsJSON) : [];
-
-                if (settings.length === 0) {
-                    alert('保存されている設定がありません。');
-                    return;
-                }
-                const randomSetting = getRandomItem(settings);
-                textInput.value = randomSetting.textContent;
-                drawCanvas(randomSetting);
             });
 
             saveImageBtn.addEventListener('click', () => {
@@ -389,9 +366,9 @@ Typo Art</textarea>
                 link.click();
             });
 
-            // --- 初期化処理 ---
-            loadAndDisplaySettings(); // ページ読み込み時に保存済み設定を読み込む
-            randomGenerateBtn.click(); // ページ読み込み時に初期アートを生成
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            randomGenerateBtn.click();
         });
     </script>
 </body>
