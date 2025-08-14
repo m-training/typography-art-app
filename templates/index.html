@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タイポグラフィ・アート・ジェネレーター</title>
+    
+    <!-- Google FontsからWebフォントを読み込む -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #007bff;
+            --primary-hover-color: #0056b3;
+            --panel-bg-color: #2c2c2c;
+            --border-color: #444;
+            --input-bg-color: #333;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            font-weight: 300;
+            text-align: center;
+            color: #fff;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+            justify-content: center;
+        }
+        .panel {
+            background-color: var(--panel-bg-color);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .controls-panel {
+            flex: 1;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .canvas-container {
+            flex: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 400px;
+        }
+        #typography-canvas {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-width: 100%;
+            height: auto;
+        }
+        .settings-panel {
+            flex: 1;
+            min-width: 280px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--input-bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+        button:hover {
+            background-color: var(--primary-hover-color);
+        }
+        .save-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+        #saved-settings-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #saved-settings-list li {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #saved-settings-list li:hover {
+            background-color: #3a3a3a;
+        }
+        #saved-settings-list li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>タイポグラフィ・アート・ジェネレーター</h1>
+
+    <div class="main-container">
+        <!-- 操作パネル -->
+        <div class="panel controls-panel">
+            <h2>コントロール</h2>
+            <textarea id="text-input" rows="5" placeholder="ここにテキストを入力...">Hello World!
+Typo Art</textarea>
+            
+            <button id="random-generate-btn">ランダム生成</button>
+            <button id="random-load-btn">保存済みからランダム表示</button>
+            <button id="save-image-btn">画像として保存</button>
+
+            <div class="save-group">
+                <input type="text" id="setting-name-input" placeholder="この設定に名前を付ける">
+                <button id="save-settings-btn">現在のアート設定を保存</button>
+            </div>
+        </div>
+
+        <!-- キャンバス表示エリア -->
+        <div class="panel canvas-container">
+            <canvas id="typography-canvas" width="800" height="600"></canvas>
+        </div>
+
+        <!-- 保存済み設定リスト -->
+        <div class="panel settings-panel">
+            <h2>保存済み設定</h2>
+            <ul id="saved-settings-list">
+                <!-- ここに保存された設定が動的に追加されます -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM要素の取得 ---
+            const canvas = document.getElementById('typography-canvas');
+            const ctx = canvas.getContext('2d');
+            const textInput = document.getElementById('text-input');
+            const randomGenerateBtn = document.getElementById('random-generate-btn');
+            const saveSettingsBtn = document.getElementById('save-settings-btn');
+            const settingNameInput = document.getElementById('setting-name-input');
+            const savedSettingsList = document.getElementById('saved-settings-list');
+            const randomLoadBtn = document.getElementById('random-load-btn');
+            const saveImageBtn = document.getElementById('save-image-btn');
+
+            // --- グローバル変数 ---
+            let currentSettings = {}; // 現在キャンバスに表示されている設定を保持
+
+            // 利用可能なWebフォントのリスト (READMEの指示に従って編集)
+            const webFonts = [
+                'serif', 'sans-serif', 'monospace', 'cursive', 'fantasy',
+                'Orbitron', 'Press Start 2P'
+            ];
+
+            // --- ヘルパー関数 ---
+            const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            const getRandomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+            const getRandomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+            // --- メインの描画関数 ---
+            function drawCanvas(settings) {
+                // 現在の設定をグローバル変数に保存
+                currentSettings = settings;
+
+                // キャンバスをクリア
+                ctx.fillStyle = settings.backgroundColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // テキストスタイルの設定
+                ctx.fillStyle = settings.fontColor;
+                ctx.font = `${settings.fontSize}px "${settings.fontFamily}"`;
+                ctx.textAlign = settings.textAlign;
+
+                // 影の設定
+                if (settings.shadowEnabled) {
+                    ctx.shadowColor = settings.shadowColor;
+                    ctx.shadowBlur = settings.shadowBlur;
+                    ctx.shadowOffsetX = settings.shadowOffsetX;
+                    ctx.shadowOffsetY = settings.shadowOffsetY;
+                } else {
+                    ctx.shadowColor = 'transparent';
+                }
+
+                // アウトラインの設定
+                if (settings.strokeEnabled) {
+                    ctx.strokeStyle = settings.strokeColor;
+                    ctx.lineWidth = settings.strokeWidth;
+                }
+
+                // テキストの描画位置を計算
+                let x;
+                if (settings.textAlign === 'left') {
+                    x = 20;
+                } else if (settings.textAlign === 'right') {
+                    x = canvas.width - 20;
+                } else { // center
+                    x = canvas.width / 2;
+                }
+                
+                // 複数行テキストに対応
+                const lines = settings.textContent.split('\n');
+                const lineHeight = settings.fontSize * 1.2;
+                const totalTextHeight = lines.length * lineHeight;
+                let startY = (canvas.height - totalTextHeight) / 2 + settings.fontSize;
+
+                lines.forEach((line, index) => {
+                    const y = startY + (index * lineHeight);
+                    if (settings.strokeEnabled) {
+                        ctx.strokeText(line, x, y);
+                    }
+                    ctx.fillText(line, x, y);
+                });
+
+                // 描画後に影をリセット
+                ctx.shadowColor = 'transparent';
+            }
+
+            // --- ランダム設定を生成する関数 ---
+            function generateRandomSettings() {
+                const text = textInput.value.trim();
+                if (!text) {
+                    alert('テキストを入力してください。');
+                    return null;
+                }
+
+                return {
+                    textContent: text,
+                    fontFamily: getRandomItem(webFonts),
+                    fontSize: getRandomInt(40, 150),
+                    fontColor: getRandomColor(),
+                    backgroundColor: getRandomColor(),
+                    textAlign: getRandomItem(['left', 'center', 'right']),
+                    shadowEnabled: Math.random() > 0.4, // 60%の確率で有効
+                    shadowColor: getRandomColor(),
+                    shadowBlur: getRandomInt(5, 20),
+                    shadowOffsetX: getRandomInt(-15, 15),
+                    shadowOffsetY: getRandomInt(-15, 15),
+                    strokeEnabled: Math.random() > 0.6, // 40%の確率で有効
+                    strokeColor: getRandomColor(),
+                    strokeWidth: getRandomInt(1, 5)
+                };
+            }
+
+            // --- API通信とUI更新 ---
+            async function fetchAndDisplaySettings() {
+                try {
+                    const response = await fetch('/api/settings');
+                    const settings = await response.json();
+                    
+                    savedSettingsList.innerHTML = ''; // リストをクリア
+                    if (settings.length === 0) {
+                        savedSettingsList.innerHTML = '<li>保存された設定はありません。</li>';
+                    } else {
+                        settings.forEach(setting => {
+                            const li = document.createElement('li');
+                            li.textContent = setting.name;
+                            li.dataset.id = setting.id; // IDをdata属性として保持
+                            li.dataset.settings = JSON.stringify(setting); // 全設定を保持
+                            savedSettingsList.appendChild(li);
+                        });
+                    }
+                } catch (error) {
+                    console.error('設定の読み込みに失敗しました:', error);
+                    savedSettingsList.innerHTML = '<li>読み込みに失敗しました。</li>';
+                }
+            }
+
+            // --- イベントリスナー ---
+            randomGenerateBtn.addEventListener('click', () => {
+                const newSettings = generateRandomSettings();
+                if (newSettings) {
+                    drawCanvas(newSettings);
+                }
+            });
+
+            saveSettingsBtn.addEventListener('click', async () => {
+                const name = settingNameInput.value.trim();
+                if (!name) {
+                    alert('設定の名前を入力してください。');
+                    return;
+                }
+                if (Object.keys(currentSettings).length === 0) {
+                    alert('まず「ランダム生成」ボタンでアートを作成してください。');
+                    return;
+                }
+
+                const dataToSave = { ...currentSettings, name: name };
+                
+                try {
+                    const response = await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dataToSave)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`サーバーエラー: ${response.statusText}`);
+                    }
+                    
+                    settingNameInput.value = ''; // 入力欄をクリア
+                    await fetchAndDisplaySettings(); // リストを更新
+                    alert(`設定「${name}」を保存しました。`);
+
+                } catch (error) {
+                    console.error('設定の保存に失敗しました:', error);
+                    alert('設定の保存に失敗しました。');
+                }
+            });
+            
+            savedSettingsList.addEventListener('click', (e) => {
+                if (e.target.tagName === 'LI' && e.target.dataset.settings) {
+                    const settings = JSON.parse(e.target.dataset.settings);
+                    textInput.value = settings.textContent; // テキストエリアも更新
+                    drawCanvas(settings);
+                }
+            });
+
+            randomLoadBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/settings/random');
+                    if (!response.ok) {
+                        if(response.status === 404) {
+                            alert('保存されている設定がありません。');
+                        } else {
+                            throw new Error('ランダム設定の取得に失敗しました。');
+                        }
+                        return;
+                    }
+                    const settings = await response.json();
+                    textInput.value = settings.textContent;
+                    drawCanvas(settings);
+                } catch (error) {
+                    console.error(error);
+                    alert(error.message);
+                }
+            });
+
+            saveImageBtn.addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = 'typography-art.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+
+            // --- 初期化処理 ---
+            fetchAndDisplaySettings(); // ページ読み込み時に保存済み設定を読み込む
+            randomGenerateBtn.click(); // ページ読み込み時に初期アートを生成
+        });
+    </script>
+</body>
+</html>
